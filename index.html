@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Central do Estudante | Sua vida acadêmica organizada</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Configuração do Tailwind (Temas Preto e Laranja) -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#fff7ed',  // Laranja super claro
+                            100: '#ffedd5', // Laranja claro
+                            200: '#fed7aa',
+                            500: '#f97316', // Laranja principal
+                            600: '#ea580c', // Laranja hover
+                            700: '#c2410c', // Laranja texto escuro
+                            900: '#7c2d12', // Laranja ultra escuro
+                        },
+                        dark: {
+                            bg: '#000000',     // Preto puro
+                            card: '#121212',   // Cinza muito escuro (para destacar os cards do fundo preto)
+                            border: '#27272a'  // Borda cinza chumbo
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Estilos Customizados -->
+    <style>
+        /* Tipografia mais nítida */
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #3f3f46; }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Animações e Transições */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Estilos do Toast */
+        #toast-container {
+            position: fixed; top: 20px; right: 20px; z-index: 9999;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast {
+            background-color: #18181b; color: white;
+            padding: 12px 20px; border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            display: flex; align-items: center; gap: 10px;
+            font-size: 0.875rem; font-weight: 500;
+            animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards, fadeOut 0.3s ease-in forwards 3s;
+            border-left: 4px solid #ea580c; /* Laranja da borda */
+        }
+        .dark .toast { background-color: #27272a; }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
+        /* Checkbox Customizado */
+        .task-checkbox:checked + div {
+            background-color: #22c55e;
+            border-color: #22c55e;
+        }
+        .task-checkbox:checked + div i { opacity: 1; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-gray-200 font-sans h-screen flex overflow-hidden transition-colors duration-200 selection:bg-primary-100 selection:text-primary-900 dark:selection:bg-primary-900 dark:selection:text-primary-100">
+
+    <!-- Modais de Interface -->
+    
+    <!-- Modal: Adição Rápida -->
+    <div id="modal-add" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-dark-card w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh] border border-gray-100 dark:border-dark-border" id="modal-add-content">
+            
+            <div class="px-5 py-4 border-b border-gray-100 dark:border-dark-border flex justify-between items-center bg-gray-50/50 dark:bg-dark-card/50">
+                <h3 class="font-bold text-lg text-gray-900 dark:text-white" id="modal-title">Novo Registro</h3>
+                <button onclick="closeModal('modal-add')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            
+            <div class="p-5 overflow-y-auto flex-1 custom-scrollbar">
+                <!-- Seletor de Tipo -->
+                <div class="flex p-1 bg-gray-100 dark:bg-black rounded-lg mb-6 border border-transparent dark:border-dark-border">
+                    <button onclick="setAddType('task')" id="tab-add-task" class="flex-1 py-1.5 text-sm font-medium rounded-md bg-white dark:bg-dark-card shadow-sm text-gray-900 dark:text-white transition-all border border-gray-200 dark:border-dark-border">Tarefa</button>
+                    <button onclick="setAddType('subject')" id="tab-add-subject" class="flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-all border border-transparent">Disciplina</button>
+                    <button onclick="setAddType('link')" id="tab-add-link" class="flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-all border border-transparent">Link</button>
+                </div>
+
+                <!-- Formulário Injetado via JS -->
+                <form id="form-add" class="space-y-4"></form>
+            </div>
+            
+            <div class="px-5 py-4 border-t border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-[#0a0a0a] flex justify-end gap-3">
+                <button type="button" onclick="closeModal('modal-add')" class="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors">Cancelar</button>
+                <button type="button" onclick="submitForm()" class="px-5 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 rounded-lg transition-colors shadow-sm">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout Principal -->
+    
+    <!-- Sidebar Desktop -->
+    <aside class="hidden md:flex flex-col w-64 bg-white dark:bg-dark-card border-r border-gray-200 dark:border-dark-border h-full z-10 flex-shrink-0 transition-colors">
+        
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 border-b border-gray-100 dark:border-dark-border">
+            <div class="w-8 h-8 bg-black dark:bg-primary-600 rounded-lg flex items-center justify-center mr-3 shadow-md">
+                <i class="ph-fill ph-student text-white text-lg"></i>
+            </div>
+            <span class="font-bold text-lg tracking-tight text-gray-900 dark:text-white">Central<span class="text-primary-600 dark:text-primary-500">Estudante</span></span>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5 custom-scrollbar">
+            <p class="px-3 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Painel</p>
+            
+            <a href="#" onclick="navigate('dashboard')" class="nav-item active flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-primary-700 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 group transition-all" data-view="dashboard">
+                <i class="ph-fill ph-squares-four text-xl mr-3 text-primary-600 dark:text-primary-500"></i> Início
+            </a>
+            
+            <a href="#" onclick="navigate('subjects')" class="nav-item flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200 group transition-all" data-view="subjects">
+                <i class="ph ph-books text-xl mr-3 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400"></i> Minhas Disciplinas
+            </a>
+            
+            <a href="#" onclick="navigate('tasks')" class="nav-item flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200 group transition-all" data-view="tasks">
+                <i class="ph ph-check-square-offset text-xl mr-3 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400"></i> Central de Tarefas
+            </a>
+            
+            <p class="px-3 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 mt-6">Recursos</p>
+            
+            <a href="#" onclick="navigate('links')" class="nav-item flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200 group transition-all" data-view="links">
+                <i class="ph ph-link text-xl mr-3 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400"></i> Meus Sistemas (Links)
+            </a>
+
+            <a href="#" onclick="navigate('settings')" class="nav-item flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200 group transition-all" data-view="settings">
+                <i class="ph ph-gear text-xl mr-3 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400"></i> Configurações
+            </a>
+            
+            <!-- Espaço IA Futura -->
+            <div class="mt-8 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#18181b] dark:to-[#0f0f11] rounded-xl p-4 border border-gray-200 dark:border-dark-border relative overflow-hidden group">
+                <div class="absolute -right-4 -top-4 opacity-20"><i class="ph-fill ph-sparkle text-5xl text-primary-500"></i></div>
+                <div class="flex items-center gap-2 mb-2 relative z-10">
+                    <span class="text-xs font-bold text-gray-900 dark:text-gray-100">Assistente IA</span>
+                    <span class="text-[9px] bg-primary-100 dark:bg-primary-900/40 text-primary-800 dark:text-primary-300 px-1.5 rounded uppercase font-bold tracking-wider border border-primary-200 dark:border-primary-800">Em breve</span>
+                </div>
+                <p class="text-[11px] text-gray-600 dark:text-gray-400 relative z-10 leading-tight">Resumos, planos de estudo e dicas para potencializar seu semestre.</p>
+            </div>
+        </nav>
+
+        <!-- User Profile Mini -->
+        <div class="p-4 border-t border-gray-100 dark:border-dark-border flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-black flex items-center justify-center border border-gray-200 dark:border-dark-border shadow-inner">
+                <i class="ph-fill ph-user text-gray-500 dark:text-gray-400"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-gray-900 dark:text-white truncate" id="ui-user-name">Estudante</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 truncate" id="ui-user-course">Curso</p>
+            </div>
+            <button onclick="toggleTheme()" class="text-gray-400 hover:text-primary-500 transition-colors p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                <i class="ph-fill ph-moon dark:hidden text-lg"></i>
+                <i class="ph-fill ph-sun hidden dark:block text-lg text-yellow-400"></i>
+            </button>
+        </div>
+    </aside>
+
+    
+    <!-- Main Content Wrapper -->
+    <div class="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-dark-bg transition-colors">
+        
+        <!-- Header -->
+        <header class="h-16 bg-white/80 dark:bg-dark-bg/80 backdrop-blur-md border-b border-gray-200 dark:border-dark-border flex items-center justify-between px-4 sm:px-8 z-20 sticky top-0 transition-colors">
+            
+            <!-- Mobile Toggle & Title -->
+            <div class="flex items-center gap-3 md:hidden">
+                <div class="w-8 h-8 bg-black dark:bg-primary-600 rounded-lg flex items-center justify-center shadow-md">
+                    <i class="ph-fill ph-student text-white text-lg"></i>
+                </div>
+                <span class="font-bold text-lg text-gray-900 dark:text-white">Central</span>
+            </div>
+
+            <!-- Context Title (Desktop) -->
+            <div class="hidden md:flex items-center">
+                <h1 id="header-title" class="text-lg font-bold text-gray-800 dark:text-gray-100">Início</h1>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-3 ml-auto">
+                <button onclick="toggleTheme()" class="md:hidden w-10 h-10 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center transition-colors">
+                    <i class="ph-fill ph-moon dark:hidden text-xl"></i>
+                    <i class="ph-fill ph-sun hidden dark:block text-xl text-yellow-400"></i>
+                </button>
+                
+                <button onclick="openModalAdd('task')" class="flex items-center gap-2 bg-black dark:bg-primary-600 hover:bg-gray-800 dark:hover:bg-primary-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-lg shadow-gray-900/20 dark:shadow-primary-900/30 border border-transparent dark:border-primary-500">
+                    <i class="ph-bold ph-plus"></i>
+                    <span class="hidden sm:inline">Adicionar</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Scrollable Area -->
+        <main id="app-content" class="flex-1 overflow-y-auto p-4 sm:p-8 pb-28 md:pb-8 relative scroll-smooth fade-in custom-scrollbar">
+            <!-- As views são renderizadas aqui via JS -->
+        </main>
+    </div>
+
+    
+    <!-- Mobile Bottom Navigation -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-dark-card/90 backdrop-blur-lg border-t border-gray-200 dark:border-dark-border pb-safe z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] transition-colors">
+        <div class="flex justify-around items-center h-16 px-2">
+            <button onclick="navigate('dashboard')" class="mobile-nav-item active flex flex-col items-center justify-center w-full h-full text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" data-view="dashboard">
+                <i class="ph-fill ph-squares-four text-2xl mb-0.5"></i>
+                <span class="text-[10px] font-semibold">Início</span>
+            </button>
+            <button onclick="navigate('subjects')" class="mobile-nav-item flex flex-col items-center justify-center w-full h-full text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" data-view="subjects">
+                <i class="ph-fill ph-books text-2xl mb-0.5"></i>
+                <span class="text-[10px] font-semibold">Matérias</span>
+            </button>
+            
+            <!-- FAB Central -->
+            <div class="relative -top-6 flex justify-center w-full px-2">
+                <button onclick="openModalAdd('task')" class="w-14 h-14 rounded-full bg-black dark:bg-primary-600 text-white flex items-center justify-center shadow-xl shadow-gray-900/40 dark:shadow-primary-900/40 hover:scale-105 active:scale-95 transition-all border-4 border-white dark:border-dark-bg">
+                    <i class="ph-bold ph-plus text-2xl"></i>
+                </button>
+            </div>
+
+            <button onclick="navigate('tasks')" class="mobile-nav-item flex flex-col items-center justify-center w-full h-full text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" data-view="tasks">
+                <i class="ph-fill ph-check-square-offset text-2xl mb-0.5"></i>
+                <span class="text-[10px] font-semibold">Tarefas</span>
+            </button>
+            <button onclick="navigate('settings')" class="mobile-nav-item flex flex-col items-center justify-center w-full h-full text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" data-view="settings">
+                <i class="ph-fill ph-list text-2xl mb-0.5"></i>
+                <span class="text-[10px] font-semibold">Menu</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Container Toasts -->
+    <div id="toast-container"></div>
+
+    <script>
+        // --- 1. GERENCIAMENTO DE ESTADO E DADOS ---
+        
+        // Dados de demonstração (Persona: José Marcelo, Iniciante)
+        const today = new Date();
+        const d_today = today.toISOString().split('T')[0];
+        const d_tomorrow = new Date(today.getTime() + 86400000).toISOString().split('T')[0];
+        const d_in3days = new Date(today.getTime() + 3 * 86400000).toISOString().split('T')[0];
+        const d_yesterday = new Date(today.getTime() - 86400000).toISOString().split('T')[0];
+
+        const DEFAULT_DATA = {
+            user: { 
+                name: 'José Marcelo', 
+                course: 'Licenciatura em Informática', 
+                semester: '1º Semestre',
+                theme: 'dark' // O tema padrão agora é dark para impressionar logo de cara!
+            },
+            subjects: [
+                { id: 's1', name: 'Introdução à Informática', prof: 'Prof. João', color: 'orange' },
+                { id: 's2', name: 'Metodologia Científica', prof: 'Dra. Ana', color: 'gray' },
+                { id: 's3', name: 'Fundamentos da Educação', prof: 'Prof. Carlos', color: 'orange' }
+            ],
+            tasks: [
+                { id: 't1', title: 'Fórum de Apresentação', subjectId: 's1', date: d_today, priority: 'urgent', status: 'pending' },
+                { id: 't2', title: 'Resumo do Capítulo 1', subjectId: 's2', date: d_tomorrow, priority: 'high', status: 'pending' },
+                { id: 't3', title: 'Prova Online Unidade I', subjectId: 's3', date: d_in3days, priority: 'urgent', status: 'pending' },
+                { id: 't4', title: 'Leitura Complementar', subjectId: 's1', date: d_today, priority: 'low', status: 'completed' },
+                { id: 't5', title: 'Atividade Prática HTML', subjectId: 's1', date: d_yesterday, priority: 'high', status: 'pending' } // Atrasada
+            ],
+            links: [
+                { id: 'l1', title: 'AVA (Ambiente Virtual)', url: '#', category: 'Sistemas', icon: 'ph-graduation-cap', color: 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-500' },
+                { id: 'l2', title: 'Portal do Aluno', url: '#', category: 'Sistemas', icon: 'ph-identification-card', color: 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
+                { id: 'l3', title: 'Google Drive da Turma', url: '#', category: 'Materiais', icon: 'ph-google-logo', color: 'bg-primary-50 text-primary-500 dark:bg-[#1a1a1a] dark:text-primary-600' },
+                { id: 'l4', title: 'Biblioteca Virtual', url: '#', category: 'Pesquisa', icon: 'ph-books', color: 'bg-gray-100 text-gray-600 dark:bg-[#1a1a1a] dark:text-gray-400' }
+            ]
+        };
+
+        let state = {};
+        let currentView = 'dashboard';
+        let currentAddType = 'task';
+        let editingId = null;
+
+        // --- 2. INICIALIZAÇÃO E PERSISTÊNCIA ---
+        function initApp() {
+            const saved = localStorage.getItem('centralEstudanteData_V2'); // Nova chave para não conflitar com a versão antiga
+            if (saved) {
+                try {
+                    state = JSON.parse(saved);
+                    if(!state.links) state.links = DEFAULT_DATA.links;
+                } catch(e) {
+                    console.error("Erro ao ler dados, restaurando padrões.");
+                    state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+                }
+            } else {
+                state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+            }
+
+            applyTheme();
+            updateUIProfile();
+            navigate('dashboard');
+        }
+
+        function saveState() {
+            localStorage.setItem('centralEstudanteData_V2', JSON.stringify(state));
+            updateUIProfile();
+        }
+
+        // --- 3. UTILITÁRIOS ---
+        const Util = {
+            generateId: () => Math.random().toString(36).substr(2, 9),
+            
+            formatDate: (dateStr) => {
+                if(!dateStr) return '';
+                const [y, m, d] = dateStr.split('-');
+                return `${d}/${m}`;
+            },
+            
+            getRelativeDateLabel: (dateStr) => {
+                if(!dateStr) return '';
+                const t = new Date(dateStr + 'T00:00:00');
+                const now = new Date();
+                now.setHours(0,0,0,0);
+                
+                const diffTime = t - now;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays === 0) return 'Hoje';
+                if (diffDays === 1) return 'Amanhã';
+                if (diffDays === -1) return 'Ontem';
+                if (diffDays > 1 && diffDays < 7) return `Em ${diffDays} dias`;
+                if (diffDays < 0) return `Atrasado há ${Math.abs(diffDays)} dias`;
+                return Util.formatDate(dateStr);
+            },
+
+            isOverdue: (dateStr) => {
+                if(!dateStr) return false;
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const taskDate = new Date(dateStr + 'T00:00:00');
+                return taskDate < today;
+            },
+
+            getSubjectInfo: (id) => {
+                return state.subjects.find(s => s.id === id) || { name: 'Sem disciplina', color: 'gray' };
+            },
+
+            getColorClasses: (colorName) => {
+                // Adaptado para Preto e Laranja
+                const colors = {
+                    orange: { bg: 'bg-primary-100 dark:bg-primary-900/20', text: 'text-primary-700 dark:text-primary-500', border: 'border-primary-200 dark:border-primary-800' },
+                    gray: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-200 dark:border-gray-700' },
+                    // Fallbacks caso tenham cores antigas salvas
+                    blue: { bg: 'bg-primary-100 dark:bg-primary-900/20', text: 'text-primary-700 dark:text-primary-500', border: 'border-primary-200 dark:border-primary-800' },
+                    purple: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-200 dark:border-gray-700' },
+                    green: { bg: 'bg-green-100 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-400', border: 'border-green-200 dark:border-green-800' },
+                    red: { bg: 'bg-red-100 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400', border: 'border-red-200 dark:border-red-800' },
+                };
+                return colors[colorName] || colors['gray'];
+            },
+
+            showToast: (message, type = 'success') => {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                const icon = type === 'success' ? '<i class="ph-fill ph-check-circle text-primary-500 text-xl"></i>' : '<i class="ph-fill ph-info text-primary-500 text-xl"></i>';
+                toast.innerHTML = `${icon} <span>${message}</span>`;
+                container.appendChild(toast);
+                setTimeout(() => { if(toast.parentNode) toast.remove(); }, 3300);
+            }
+        };
+
+        // --- 4. TEMA E UI GERAL ---
+        function toggleTheme() {
+            state.user.theme = state.user.theme === 'dark' ? 'light' : 'dark';
+            saveState();
+            applyTheme();
+        }
+
+        function applyTheme() {
+            if (state.user.theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        function updateUIProfile() {
+            document.getElementById('ui-user-name').innerText = state.user.name;
+            document.getElementById('ui-user-course').innerText = state.user.course;
+        }
+
+        function navigate(view) {
+            currentView = view;
+            
+            document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(el => {
+                el.classList.remove('active', 'text-primary-700', 'dark:text-primary-400', 'bg-primary-50', 'dark:bg-primary-900/20', 'text-primary-600', 'dark:text-white');
+                
+                if(el.classList.contains('nav-item')) {
+                    el.classList.add('text-gray-600', 'dark:text-gray-400');
+                    el.querySelector('i').classList.remove('text-primary-600', 'dark:text-primary-500');
+                    el.querySelector('i').classList.add('text-gray-400', 'dark:text-gray-500');
+                } else {
+                    el.classList.add('text-gray-400', 'dark:text-gray-500');
+                }
+            });
+
+            const activeItems = document.querySelectorAll(`[data-view="${view}"]`);
+            activeItems.forEach(el => {
+                if(el.classList.contains('nav-item')) {
+                    el.classList.add('active', 'text-primary-700', 'dark:text-white', 'bg-primary-50', 'dark:bg-primary-900/10');
+                    el.classList.remove('text-gray-600', 'dark:text-gray-400');
+                    el.querySelector('i').classList.add('text-primary-600', 'dark:text-primary-500');
+                    el.querySelector('i').classList.remove('text-gray-400', 'dark:text-gray-500');
+                } else {
+                    el.classList.add('active', 'text-primary-600', 'dark:text-primary-500');
+                    el.classList.remove('text-gray-400', 'dark:text-gray-500');
+                }
+            });
+
+            const titles = {
+                'dashboard': 'Visão Geral', 'subjects': 'Minhas Disciplinas', 'tasks': 'Central de Tarefas',
+                'links': 'Sistemas e Links', 'settings': 'Configurações'
+            };
+            document.getElementById('header-title').innerText = titles[view] || '';
+
+            const content = document.getElementById('app-content');
+            content.classList.remove('fade-in');
+            void content.offsetWidth;
+            content.classList.add('fade-in');
+
+            switch(view) {
+                case 'dashboard': renderDashboard(); break;
+                case 'subjects': renderSubjects(); break;
+                case 'tasks': renderTasks(); break;
+                case 'links': renderLinks(); break;
+                case 'settings': renderSettings(); break;
+            }
+        }
+
+        // --- 5. RENDERIZAÇÃO DAS TELAS ---
+        
+        function renderDashboard() {
+            const content = document.getElementById('app-content');
+            
+            const total = state.tasks.length;
+            const completed = state.tasks.filter(t => t.status === 'completed').length;
+            const pending = total - completed;
+            const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            const activeTasks = state.tasks.filter(t => t.status !== 'completed');
+            activeTasks.sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                if (dateA < dateB) return -1;
+                if (dateA > dateB) return 1;
+                const p = { 'urgent': 1, 'high': 2, 'medium': 3, 'low': 4 };
+                return p[a.priority] - p[b.priority];
+            });
+
+            const todayFocus = activeTasks.slice(0, 4);
+
+            let html = `
+                <div class="mb-8">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">Olá, ${state.user.name.split(' ')[0]}! 👋</h2>
+                    <p class="text-gray-500 dark:text-gray-400">Veja o que está acontecendo na sua vida acadêmica.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                    
+                    <div class="lg:col-span-2 space-y-8">
+                        
+                        <section>
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                    <i class="ph-fill ph-lightning text-yellow-500 text-xl"></i> Acesso Rápido
+                                </h3>
+                                <button onclick="navigate('links')" class="text-xs font-semibold text-primary-600 dark:text-primary-500 hover:underline">Ver todos</button>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                ${state.links.slice(0, 4).map(link => `
+                                    <a href="${link.url}" target="_blank" class="bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border p-4 rounded-2xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900/50 transition-all group text-center flex flex-col items-center justify-center h-28">
+                                        <div class="w-10 h-10 rounded-full ${link.color || 'bg-gray-100 text-gray-600 dark:bg-black dark:text-gray-400'} flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shrink-0">
+                                            <i class="${link.icon} text-xl"></i>
+                                        </div>
+                                        <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 line-clamp-2 leading-tight w-full">${link.title}</span>
+                                    </a>
+                                `).join('')}
+                            </div>
+                        </section>
+
+                        <section>
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                    <i class="ph-fill ph-target text-red-500 text-xl"></i> Foco de Hoje
+                                </h3>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                ${todayFocus.length === 0 ? `
+                                    <div class="bg-white dark:bg-dark-card rounded-2xl p-8 border border-gray-100 dark:border-dark-border shadow-sm text-center">
+                                        <div class="w-16 h-16 mx-auto bg-green-50 dark:bg-green-900/20 text-green-500 rounded-full flex items-center justify-center mb-3">
+                                            <i class="ph-fill ph-check-circle text-3xl"></i>
+                                        </div>
+                                        <h4 class="font-bold text-gray-900 dark:text-white mb-1">Tudo em dia!</h4>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Você não tem atividades pendentes.</p>
+                                    </div>
+                                ` : todayFocus.map(task => renderTaskRow(task)).join('')}
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="space-y-6">
+                        
+                        <div class="bg-gradient-to-b from-gray-900 to-black dark:from-[#111] dark:to-[#000] border border-gray-800 dark:border-[#222] rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group">
+                            <div class="absolute -right-6 -top-6 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                                <i class="ph-fill ph-chart-polar text-9xl text-primary-500"></i>
+                            </div>
+                            <div class="relative z-10">
+                                <h3 class="font-medium text-gray-400 text-sm mb-1 uppercase tracking-wider">Meu Semestre</h3>
+                                <div class="text-4xl font-bold mb-6 text-white">${progress}% <span class="text-lg font-normal text-gray-500">concluído</span></div>
+                                
+                                <div class="w-full bg-gray-800 rounded-full h-2 mb-4 overflow-hidden border border-gray-700">
+                                    <div class="bg-primary-500 h-full rounded-full shadow-[0_0_10px_rgba(249,115,22,0.5)] transition-all duration-1000" style="width: ${progress}%"></div>
+                                </div>
+                                
+                                <p class="text-sm text-gray-300 font-medium leading-relaxed">
+                                    ${progress === 100 ? 'Parabéns! Você finalizou tudo.' : 
+                                      progress > 50 ? 'Ótimo ritmo! Continue focado.' : 
+                                      `Você tem <strong class="text-primary-400">${pending}</strong> atividades pendentes.`}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-center">
+                                <span class="text-gray-500 dark:text-gray-400 text-xs font-semibold mb-1 uppercase tracking-wider">Disciplinas</span>
+                                <span class="text-2xl font-bold text-gray-900 dark:text-white">${state.subjects.length}</span>
+                            </div>
+                            <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-center">
+                                <span class="text-gray-500 dark:text-gray-400 text-xs font-semibold mb-1 uppercase tracking-wider">Pendentes</span>
+                                <span class="text-2xl font-bold text-primary-500">${pending}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-primary-50 dark:bg-[#1a1a1a] rounded-2xl p-4 border border-primary-100 dark:border-[#333] text-center shadow-sm">
+                            <p class="text-[11px] text-primary-700 dark:text-gray-300 font-medium leading-relaxed">
+                                💡 Lembre-se: O <strong>AVA</strong> da sua faculdade é o local oficial para aulas e provas. Use esta Central para sua organização pessoal.
+                            </p>
+                        </div>
+
+                    </div>
+                </div>
+            `;
+            content.innerHTML = html;
+        }
+
+        function renderSubjects() {
+            const content = document.getElementById('app-content');
+            let html = `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Minhas Disciplinas</h2>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Gerencie os módulos do seu semestre.</p>
+                    </div>
+                    <button onclick="openModalAdd('subject')" class="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-800 dark:text-gray-200 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm hover:bg-gray-50 dark:hover:bg-[#1a1a1a] transition-colors flex items-center gap-2">
+                        <i class="ph-bold ph-plus"></i> Nova Disciplina
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            `;
+
+            if(state.subjects.length === 0) {
+                html += `
+                    <div class="col-span-full py-16 text-center bg-white dark:bg-dark-card rounded-3xl border border-dashed border-gray-200 dark:border-dark-border">
+                        <div class="w-20 h-20 bg-gray-50 dark:bg-black rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="ph ph-books text-3xl text-gray-400 dark:text-gray-500"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Nenhuma disciplina cadastrada</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">Cadastre as matérias que você está cursando para organizar suas tarefas.</p>
+                        <button onclick="openModalAdd('subject')" class="bg-primary-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-700 transition-colors inline-flex items-center gap-2 shadow-lg shadow-primary-500/20">
+                            Cadastrar Primeira Disciplina
+                        </button>
+                    </div>
+                `;
+            } else {
+                state.subjects.forEach(sub => {
+                    const colors = Util.getColorClasses(sub.color);
+                    const subTasks = state.tasks.filter(t => t.subjectId === sub.id);
+                    const pending = subTasks.filter(t => t.status !== 'completed').length;
+                    const total = subTasks.length;
+                    const prog = total > 0 ? Math.round(((total - pending) / total) * 100) : 0;
+
+                    html += `
+                        <div class="bg-white dark:bg-dark-card rounded-2xl p-5 border border-gray-100 dark:border-dark-border shadow-sm hover:shadow-md hover:border-primary-300 dark:hover:border-primary-900/50 transition-all relative overflow-hidden group flex flex-col h-full">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="w-12 h-12 rounded-xl ${colors.bg} ${colors.text} flex items-center justify-center text-2xl shrink-0">
+                                    <i class="ph-fill ph-book-bookmark"></i>
+                                </div>
+                                <button class="text-gray-300 dark:text-gray-600 hover:text-red-500 transition-colors p-1" onclick="deleteSubject('${sub.id}')" title="Excluir">
+                                    <i class="ph-bold ph-trash"></i>
+                                </button>
+                            </div>
+                            <h3 class="font-bold text-gray-900 dark:text-white text-lg leading-tight mb-1 line-clamp-2 flex-1" title="${sub.name}">${sub.name}</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 flex items-center gap-1.5">
+                                <i class="ph-fill ph-chalkboard-teacher text-gray-400"></i> ${sub.prof || 'Professor não informado'}
+                            </p>
+                            <div class="mt-auto pt-4 border-t border-gray-50 dark:border-[#1a1a1a]">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">${pending} pendentes</span>
+                                    <span class="text-xs font-bold text-gray-900 dark:text-white">${prog}%</span>
+                                </div>
+                                <div class="w-full bg-gray-100 dark:bg-black rounded-full h-1.5 overflow-hidden">
+                                    <div class="h-1.5 rounded-full ${colors.bg.split(' ')[0].replace('100', '500')}" style="width: ${prog}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            html += `</div>`;
+            content.innerHTML = html;
+        }
+
+        function renderTasks() {
+            const content = document.getElementById('app-content');
+            const pending = state.tasks.filter(t => t.status !== 'completed').sort((a,b) => new Date(a.date) - new Date(b.date));
+            const completed = state.tasks.filter(t => t.status === 'completed').sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            let html = `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Central de Tarefas</h2>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Acompanhe prazos e avaliações.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <div class="flex items-center justify-between mb-4 border-b border-gray-200 dark:border-dark-border pb-2">
+                            <h3 class="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-primary-500"></span> Pendentes
+                            </h3>
+                            <span class="text-xs font-bold bg-gray-100 dark:bg-black text-gray-600 dark:text-gray-300 px-2 py-1 rounded-lg border border-gray-200 dark:border-dark-border">${pending.length}</span>
+                        </div>
+                        <div class="space-y-3">
+                            ${pending.length === 0 ? '<p class="text-sm text-gray-400 dark:text-gray-500 italic py-4">Oba! Nenhuma tarefa pendente.</p>' : ''}
+                            ${pending.map(task => renderTaskRow(task)).join('')}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-4 border-b border-gray-200 dark:border-dark-border pb-2">
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2 opacity-70">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span> Concluídas
+                                </h3>
+                                <span class="text-xs font-bold bg-gray-100 dark:bg-black text-gray-600 dark:text-gray-300 px-2 py-1 rounded-lg border border-gray-200 dark:border-dark-border">${completed.length}</span>
+                            </div>
+                            ${completed.length > 0 ? `<button onclick="clearCompletedTasks()" class="text-[11px] font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/10 px-2 py-1 rounded transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-900/30">Limpar Histórico</button>` : ''}
+                        </div>
+                        <div class="space-y-3 opacity-60 hover:opacity-100 transition-opacity">
+                            ${completed.length === 0 ? '<p class="text-sm text-gray-400 dark:text-gray-500 italic py-4">Nenhuma tarefa finalizada ainda.</p>' : ''}
+                            ${completed.slice(0, 10).map(task => renderTaskRow(task, true)).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            content.innerHTML = html;
+        }
+
+        function renderTaskRow(task, isCompleted = false) {
+            const sub = Util.getSubjectInfo(task.subjectId);
+            const isLate = !isCompleted && Util.isOverdue(task.date);
+            const dateLabel = Util.getRelativeDateLabel(task.date);
+            
+            let prioIcon = '';
+            let dateColor = 'text-gray-500 dark:text-gray-400';
+            let bgClass = 'bg-white dark:bg-dark-card border-gray-100 dark:border-dark-border';
+
+            if (!isCompleted) {
+                if(task.priority === 'urgent') prioIcon = '<i class="ph-fill ph-warning text-red-500" title="Urgente"></i>';
+                else if(task.priority === 'high') prioIcon = '<i class="ph-fill ph-arrow-up text-primary-500" title="Alta prioridade"></i>';
+
+                if (isLate) {
+                    dateColor = 'text-red-600 dark:text-red-400 font-semibold';
+                    bgClass = 'bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30';
+                } else if (dateLabel === 'Hoje') {
+                    dateColor = 'text-primary-600 dark:text-primary-400 font-semibold';
+                }
+            }
+
+            return `
+                <div class="rounded-xl p-3 sm:p-4 border shadow-sm hover:shadow-md transition-shadow group flex items-start gap-3 sm:gap-4 ${bgClass} relative overflow-hidden">
+                    ${isLate && !isCompleted ? '<div class="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>' : ''}
+                    
+                    <label class="mt-0.5 cursor-pointer flex-shrink-0 relative">
+                        <input type="checkbox" class="task-checkbox sr-only" ${isCompleted ? 'checked' : ''} onchange="toggleTask('${task.id}')">
+                        <div class="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center transition-colors hover:border-primary-500 bg-white dark:bg-black">
+                            <i class="ph-bold ph-check text-white text-sm opacity-0 transition-opacity"></i>
+                        </div>
+                    </label>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between gap-2 mb-1">
+                            <h4 class="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base leading-tight ${isCompleted ? 'line-through text-gray-500 dark:text-gray-500' : ''}">${task.title}</h4>
+                            <div class="flex items-center gap-1.5 shrink-0 mt-0.5">
+                                ${prioIcon}
+                                <span class="text-[10px] sm:text-xs ${dateColor} whitespace-nowrap bg-gray-50 dark:bg-black border border-transparent dark:border-dark-border px-1.5 py-0.5 rounded">${dateLabel}</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full ${Util.getColorClasses(sub.color).bg.split(' ')[0].replace('100', '500')}"></span>
+                            ${sub.name}
+                        </p>
+                    </div>
+
+                    <div class="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col sm:flex-row gap-1 mt-0.5 shrink-0">
+                        ${!isCompleted ? `
+                        <button class="text-gray-400 dark:text-gray-600 hover:text-primary-500 p-1 transition-colors" onclick="openModalEditTask('${task.id}')" title="Editar">
+                            <i class="ph-bold ph-pencil-simple"></i>
+                        </button>
+                        ` : ''}
+                        <button class="text-gray-400 dark:text-gray-600 hover:text-red-500 p-1 transition-colors" onclick="deleteTask('${task.id}')" title="Excluir">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderLinks() {
+            const content = document.getElementById('app-content');
+            let html = `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Meus Sistemas</h2>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Acesso rápido aos portais da faculdade.</p>
+                    </div>
+                    <button onclick="openModalAdd('link')" class="bg-primary-600 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm hover:bg-primary-700 transition-colors flex items-center gap-2">
+                        <i class="ph-bold ph-plus"></i> Novo Link
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            `;
+
+            if(state.links.length === 0) {
+                html += `<div class="col-span-full py-10 text-center text-gray-400 italic">Nenhum link cadastrado.</div>`;
+            } else {
+                state.links.forEach(link => {
+                    html += `
+                        <div class="bg-white dark:bg-dark-card rounded-2xl p-4 border border-gray-100 dark:border-dark-border shadow-sm flex items-center gap-4 group h-24 hover:border-primary-200 dark:hover:border-primary-900/50 transition-colors">
+                            <div class="w-12 h-12 rounded-xl ${link.color || 'bg-gray-100 text-gray-600 dark:bg-black dark:text-gray-400'} flex items-center justify-center text-2xl shrink-0 border border-transparent dark:border-[#222]">
+                                <i class="${link.icon || 'ph-link'}"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block mb-0.5">${link.category}</span>
+                                <h3 class="font-bold text-gray-900 dark:text-gray-100 text-sm truncate" title="${link.title}">${link.title}</h3>
+                            </div>
+                            <a href="${link.url}" target="_blank" class="w-8 h-8 rounded-full bg-gray-50 dark:bg-black flex items-center justify-center text-primary-600 dark:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 border border-transparent dark:border-dark-border transition-colors shrink-0">
+                                <i class="ph-bold ph-arrow-right"></i>
+                            </a>
+                        </div>
+                    `;
+                });
+            }
+            html += `</div>`;
+            content.innerHTML = html;
+        }
+
+        function renderSettings() {
+            const content = document.getElementById('app-content');
+            content.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Configurações e Perfil</h2>
+                    
+                    <div class="bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border overflow-hidden shadow-sm mb-8">
+                        <div class="p-6 border-b border-gray-100 dark:border-dark-border">
+                            <h3 class="font-bold text-lg text-gray-800 dark:text-gray-200 mb-4">Meus Dados</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nome</label>
+                                    <input type="text" id="set-name" value="${state.user.name}" class="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-dark-border rounded-xl px-4 py-2.5 text-gray-900 dark:text-white outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-shadow">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Curso</label>
+                                    <input type="text" id="set-course" value="${state.user.course}" class="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-dark-border rounded-xl px-4 py-2.5 text-gray-900 dark:text-white outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-shadow">
+                                </div>
+                                <button onclick="saveProfile()" class="bg-black dark:bg-primary-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-800 dark:hover:bg-primary-700 transition-colors">Atualizar Perfil</button>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6 bg-gray-50 dark:bg-[#0a0a0a]">
+                            <h3 class="font-bold text-lg text-gray-800 dark:text-gray-200 mb-2">Sobre a Central do Estudante</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
+                                Criado para estudantes que querem ter controle sobre sua vida acadêmica.
+                                <strong class="text-primary-600 dark:text-primary-500">Seu AVA continua sendo o AVA. A Central organiza o resto.</strong>
+                            </p>
+                            
+                            <!-- Nova seção de autoria -->
+                            <div class="flex items-center gap-3 mt-5 pt-5 border-t border-gray-200 dark:border-[#222]">
+                                <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-black border border-gray-300 dark:border-[#333] flex items-center justify-center text-gray-500 dark:text-gray-400">
+                                    <i class="ph-fill ph-code text-lg"></i>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500 mb-0.5">Idealizado e Desenvolvido por</p>
+                                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">José Marcelo dos Santos</p>
+                                </div>
+                            </div>
+
+                            <p class="text-xs text-gray-500 flex items-center gap-1.5 mt-5"><i class="ph-fill ph-shield-check text-green-500"></i> Seus dados estão armazenados localmente neste dispositivo.</p>
+                        </div>
+                    </div>
+                    
+                    <button onclick="resetData()" class="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-2">
+                        <i class="ph-bold ph-warning-circle"></i> Restaurar dados originais (Apagar tudo)
+                    </button>
+                </div>
+            `;
+        }
+
+        // --- 6. LÓGICA DE AÇÕES ---
+        function toggleTask(id) {
+            const task = state.tasks.find(t => t.id === id);
+            if (task) {
+                task.status = task.status === 'completed' ? 'pending' : 'completed';
+                saveState();
+                Util.showToast(task.status === 'completed' ? 'Atividade concluída!' : 'Movida para pendentes.');
+                if(currentView === 'tasks') renderTasks();
+                else if(currentView === 'dashboard') renderDashboard();
+            }
+        }
+
+        function deleteTask(id) {
+            if(confirm("Excluir esta tarefa?")) {
+                state.tasks = state.tasks.filter(t => t.id !== id);
+                saveState();
+                if(currentView === 'tasks') renderTasks();
+                else renderDashboard();
+            }
+        }
+
+        function clearCompletedTasks() {
+            if(confirm("Deseja limpar permanentemente todas as tarefas concluídas?")) {
+                state.tasks = state.tasks.filter(t => t.status !== 'completed');
+                saveState();
+                if(currentView === 'tasks') renderTasks();
+                else renderDashboard();
+                Util.showToast("Tarefas finalizadas foram limpas.");
+            }
+        }
+
+        function deleteSubject(id) {
+            if(confirm("Excluir disciplina e todas as tarefas associadas?")) {
+                state.subjects = state.subjects.filter(s => s.id !== id);
+                state.tasks = state.tasks.filter(t => t.subjectId !== id);
+                saveState();
+                renderSubjects();
+            }
+        }
+
+        function saveProfile() {
+            state.user.name = document.getElementById('set-name').value || 'Estudante';
+            state.user.course = document.getElementById('set-course').value || 'Curso';
+            saveState();
+            Util.showToast('Perfil atualizado com sucesso!');
+        }
+
+        function resetData() {
+            if(confirm("Tem certeza? Isso apagará todos os seus dados e voltará ao modelo inicial.")) {
+                localStorage.removeItem('centralEstudanteData_V2');
+                location.reload();
+            }
+        }
+
+        // --- 7. GERENCIAMENTO DE MODAL ---
+        function openModalAdd(type = 'task') {
+            editingId = null;
+            document.getElementById('modal-title').innerText = "Novo Registro";
+            const modal = document.getElementById('modal-add');
+            modal.classList.remove('hidden');
+            void modal.offsetWidth;
+            modal.classList.remove('opacity-0');
+            modal.querySelector('#modal-add-content').classList.remove('scale-95');
+            setAddType(type);
+        }
+
+        function openModalEditTask(id) {
+            const task = state.tasks.find(t => t.id === id);
+            if(!task) return;
+            editingId = id;
+            const modal = document.getElementById('modal-add');
+            modal.classList.remove('hidden');
+            void modal.offsetWidth;
+            modal.classList.remove('opacity-0');
+            modal.querySelector('#modal-add-content').classList.remove('scale-95');
+            
+            document.getElementById('modal-title').innerText = "Editar Tarefa";
+            setAddType('task');
+            
+            setTimeout(() => {
+                document.getElementById('add-title').value = task.title;
+                document.getElementById('add-subject').value = task.subjectId;
+                document.getElementById('add-date').value = task.date;
+                document.getElementById('add-priority').value = task.priority;
+            }, 10);
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.add('opacity-0');
+            modal.children[0].classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function setAddType(type) {
+            currentAddType = type;
+            const tabs = ['task', 'subject', 'link'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-add-${t}`);
+                if (t === type) {
+                    btn.className = "flex-1 py-1.5 text-sm font-bold rounded-md bg-white dark:bg-[#1a1a1a] shadow-sm text-primary-600 dark:text-primary-500 transition-all border border-gray-200 dark:border-dark-border";
+                } else {
+                    btn.className = "flex-1 py-1.5 text-sm font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-all border border-transparent";
+                }
+            });
+
+            const form = document.getElementById('form-add');
+            const inputClass = "w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-dark-border rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-shadow";
+            const labelClass = "block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide";
+
+            if (type === 'task') {
+                const subjOptions = state.subjects.length > 0 
+                    ? state.subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('')
+                    : `<option value="" disabled selected>Cadastre uma disciplina</option>`;
+
+                form.innerHTML = `
+                    <div>
+                        <label class="${labelClass}">O que precisa fazer?</label>
+                        <input type="text" id="add-title" required class="${inputClass}" placeholder="Ex: Prova de Matemática..." autofocus>
+                    </div>
+                    <div>
+                        <label class="${labelClass}">Disciplina</label>
+                        <select id="add-subject" class="${inputClass}" ${state.subjects.length===0?'disabled':''}>${subjOptions}</select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="${labelClass}">Prazo / Data</label>
+                            <input type="date" id="add-date" required class="${inputClass}">
+                        </div>
+                        <div>
+                            <label class="${labelClass}">Prioridade</label>
+                            <select id="add-priority" class="${inputClass}">
+                                <option value="low">Tranquila</option>
+                                <option value="medium" selected>Normal</option>
+                                <option value="high">Alta</option>
+                                <option value="urgent">Urgente 🔥</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'subject') {
+                form.innerHTML = `
+                    <div>
+                        <label class="${labelClass}">Nome da Disciplina</label>
+                        <input type="text" id="add-title" required class="${inputClass}" placeholder="Ex: Cálculo I">
+                    </div>
+                    <div>
+                        <label class="${labelClass}">Professor (Opcional)</label>
+                        <input type="text" id="add-prof" class="${inputClass}" placeholder="Nome do docente">
+                    </div>
+                    <div>
+                        <label class="${labelClass}">Cor (Marcador)</label>
+                        <select id="add-color" class="${inputClass}">
+                            <option value="orange">Laranja</option>
+                            <option value="gray">Cinza / Neutro</option>
+                        </select>
+                    </div>
+                `;
+            } else if (type === 'link') {
+                form.innerHTML = `
+                    <div>
+                        <label class="${labelClass}">Nome do Sistema</label>
+                        <input type="text" id="add-title" required class="${inputClass}" placeholder="Ex: Portal do Aluno">
+                    </div>
+                    <div>
+                        <label class="${labelClass}">Link (URL)</label>
+                        <input type="url" id="add-url" required class="${inputClass}" placeholder="https://..." value="https://">
+                    </div>
+                    <div>
+                        <label class="${labelClass}">Categoria</label>
+                        <select id="add-category" class="${inputClass}">
+                            <option value="Sistemas">Sistemas Oficiais</option>
+                            <option value="Materiais">Drive / Pastas</option>
+                            <option value="Pesquisa">Biliotecas</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                `;
+            }
+        }
+
+        function submitForm() {
+            const titleInput = document.getElementById('add-title');
+            if(titleInput) titleInput.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+
+            if(!titleInput || !titleInput.value.trim()) {
+                Util.showToast("O título é obrigatório.", "info");
+                if(titleInput) {
+                    titleInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+                    titleInput.focus();
+                }
+                return;
+            }
+
+            if (currentAddType === 'task') {
+                if(state.subjects.length === 0) {
+                    Util.showToast("Crie uma disciplina primeiro.", "info");
+                    return;
+                }
+                const dateVal = document.getElementById('add-date').value || new Date().toISOString().split('T')[0];
+                
+                if (editingId) {
+                    const taskIndex = state.tasks.findIndex(t => t.id === editingId);
+                    if(taskIndex !== -1) {
+                        state.tasks[taskIndex] = {
+                            ...state.tasks[taskIndex],
+                            title: titleInput.value,
+                            subjectId: document.getElementById('add-subject').value,
+                            date: dateVal,
+                            priority: document.getElementById('add-priority').value
+                        };
+                        Util.showToast("Tarefa atualizada!");
+                    }
+                } else {
+                    state.tasks.push({
+                        id: Util.generateId(),
+                        title: titleInput.value,
+                        subjectId: document.getElementById('add-subject').value,
+                        date: dateVal,
+                        priority: document.getElementById('add-priority').value,
+                        status: 'pending'
+                    });
+                    Util.showToast("Tarefa cadastrada!");
+                }
+            } 
+            else if (currentAddType === 'subject') {
+                state.subjects.push({
+                    id: Util.generateId(),
+                    name: titleInput.value,
+                    prof: document.getElementById('add-prof').value,
+                    color: document.getElementById('add-color').value
+                });
+                Util.showToast("Disciplina cadastrada!");
+            }
+            else if (currentAddType === 'link') {
+                const colorMap = {
+                    'Sistemas': 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-500',
+                    'Materiais': 'bg-gray-100 text-gray-700 dark:bg-[#1a1a1a] dark:text-gray-300',
+                    'Pesquisa': 'bg-primary-50 text-primary-500 dark:bg-[#1a1a1a] dark:text-primary-600',
+                    'Outros': 'bg-gray-50 text-gray-600 dark:bg-black dark:text-gray-400'
+                };
+                const iconMap = {
+                    'Sistemas': 'ph-laptop', 'Materiais': 'ph-folder', 'Pesquisa': 'ph-magnifying-glass', 'Outros': 'ph-link'
+                };
+                const cat = document.getElementById('add-category').value;
+                
+                state.links.push({
+                    id: Util.generateId(),
+                    title: titleInput.value,
+                    url: document.getElementById('add-url').value,
+                    category: cat,
+                    icon: iconMap[cat],
+                    color: colorMap[cat]
+                });
+                Util.showToast("Link salvo!");
+            }
+
+            saveState();
+            closeModal('modal-add');
+            
+            if (currentView === 'dashboard') renderDashboard();
+            else if (currentView === 'subjects' && currentAddType === 'subject') renderSubjects();
+            else if (currentView === 'tasks' && currentAddType === 'task') renderTasks();
+            else if (currentView === 'links' && currentAddType === 'link') renderLinks();
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
